@@ -48,8 +48,14 @@
                 Value="{Binding CurrentPass}"
                     />
             <StackPanel Orientation="Horizontal">
-                <TextBlock>Frames to render</TextBlock>
-                <TextBox Text="{Binding FramesToRender}"/>
+                <TextBlock>Start pass to render (-1 for all)</TextBlock>
+                <TextBox Width="80" Text="{Binding StartPassToRender}"/>
+                <TextBlock>End pass to render (-1 for all)</TextBlock>
+                <TextBox Width="80" Text="{Binding EndPassToRender}"/>
+                <TextBlock>Pass delta until errors seen</TextBlock>
+                <TextBox Width="80" Text="{Binding PreErrorPassDelta}"/>
+                <TextBlock>Pass delta after errors seen</TextBlock>
+                <TextBox Width="80" Text="{Binding PostErrorPassDelta}"/>
                 <Button Click="RenderClicked">Render...</Button>
             </StackPanel>
         </StackPanel>

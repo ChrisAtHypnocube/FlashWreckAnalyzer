@@ -40,30 +40,72 @@ namespace FlashWreckAnalyzer
 
         internal async void RenderFrames()
         {
-            var frameCount = FramesToRender;
-            Message = "Rendering " + frameCount + " frames...";
-
             var formattingString = "FlashWreck{0:D8}.png";
-            
-            await RenderFramesAsync(frameCount, formattingString, cts.Token, new Progress<string>(s=>Message=s));
 
-            Message = "Rendering done. Saved at " + string.Format(formattingString,0);
-        }
+            await RenderFramesAsync(
+                StartPassToRender, 
+                EndPassToRender,
+                PreErrorPassDelta,
+                PostErrorPassDelta,
+                formattingString, cts.Token, new Progress<string>(s=>Message=s));
+       }
 
-        private Task RenderFramesAsync(int frameCount, string formattingString, CancellationToken token, IProgress<string> progress )
+        private Task RenderFramesAsync(
+            long startPassToRender, long endPassToRender, long preErrorPassDelta, long postErrorPassDelta, 
+            string formattingString, 
+            CancellationToken token, 
+            IProgress<string> progress)
+
         {
+            var minPass = Model.Passes.First().Pass;
+            var maxPass = Model.Passes.Last().Pass;
+            // validate
+            if (startPassToRender < 0)
+                startPassToRender = minPass;
+            if (endPassToRender < 0)
+                endPassToRender = maxPass;
+
+            if (preErrorPassDelta < 0 || postErrorPassDelta < 0 || startPassToRender > maxPass ||
+                endPassToRender > maxPass || endPassToRender < startPassToRender)
+            {
+                MessageBox.Show("Render parameters out of range or invalid ordering or invalid deltas");
+                return Task.Delay(1); // does nothing really...
+            }
+
             return Task.Run(() =>
             {
-                var totalCount = Model.Passes.Count;
-                for (var frame = 0L; frame < frameCount; ++frame)
+                var frame = 0L;
+                var currentPass = startPassToRender;
+                var passDelta = PreErrorPassDelta;
+                var firstErrorPass = Model.Passes.First(p => p.Errors.Any()).Pass;
+
+                // estimate total frames:
+                var totalFrames =
+                    Math.Max(endPassToRender - firstErrorPass + postErrorPassDelta - 1,0)/postErrorPassDelta +
+                    Math.Max(firstErrorPass - startPassToRender + preErrorPassDelta - 1, 0) / preErrorPassDelta;
+
+                while (currentPass <= endPassToRender+passDelta-1)
                 {
                     token.ThrowIfCancellationRequested();
-                    long passIndex = totalCount * frame / (frameCount-1);
-                    var image = CreateImage(passIndex);
+
+                    // makes sure we hit last frame directly
+                    if (currentPass > endPassToRender)
+                        currentPass = endPassToRender;
+
+                    var image = CreateImage(currentPass);
                     var filename = String.Format(formattingString, frame);
                     SaveImageToFile(filename, image);
-                    if ((frame&511)==0)
-                        progress.Report(String.Format("Image {0}/{1} done, saved as {2}",frame,frameCount,filename));
+                    
+                    if ((frame&7)==0)
+                        progress.Report(
+                            String.Format(
+                            "Image {0}/{1} done, saved as {2}",frame,totalFrames,filename)
+                            );
+
+                    ++frame;
+                    if (currentPass >= firstErrorPass)
+                        passDelta = postErrorPassDelta;
+                    currentPass += passDelta;
                 }
                 progress.Report("All images done.");
             });
@@ -85,8 +127,8 @@ namespace FlashWreckAnalyzer
 
             //var filename1 = @"HCLogfile0005.txt";
             //var filename1 = @"HCLogfile0008.txt";
-            //var filename1 = @"HCLogfile0009.txt";
-            var filename1 = @"HCLogfile0012.txt";
+            var filename1 = @"HCLogfile0009.txt";
+            //var filename1 = @"HCLogfile0012.txt";
 
             if (!File.Exists(Path.Combine(path, filename1)))
                 path = @"C:\Users\Chris\SkyDrive\Hypnocube\HypnoController\Staging";
@@ -798,23 +840,6 @@ namespace FlashWreckAnalyzer
             pixels[index  ] = r;
         }
 
-        #region FramesToRender Property
-        private int framesToRender = 60;
-        /// <summary>
-        /// Gets or sets the number of frames to render.
-        /// </summary>
-        public int FramesToRender
-        {
-            get { return framesToRender; }
-            set
-            {
-                // return true if there was a change.
-                SetField(ref framesToRender, value);
-            }
-        }
-        #endregion
-
-
         #region CurrentPass Property
         private int curPass = 0;
         /// <summary>
@@ -833,6 +858,66 @@ namespace FlashWreckAnalyzer
 
         #endregion
 
+        
+    #region StartPassToRender Property
+    private long startPassToRender = -1;
+    /// <summary>
+    /// Gets or sets the lowest pass to render.
+    /// </summary>
+    public long StartPassToRender
+    {
+        get { return startPassToRender; }
+        set { 
+            // return true if there was a change.
+            SetField(ref startPassToRender, value);
+            }
+    }
+    #endregion
+
+        #region EndPassToRender Property
+    private long endPassToRender = -1;
+    /// <summary>
+    /// Gets or sets the last pass to render.
+    /// </summary>
+    public long EndPassToRender
+    {
+        get { return endPassToRender; }
+        set { 
+            // return true if there was a change.
+            SetField(ref endPassToRender, value);
+            }
+    }
+    #endregion
+
+        #region PreErrorPassDelta Property
+    private long preErrorPassDelta = 1000;
+    /// <summary>
+    /// Gets or sets how many passes to skip per render before an error happens.
+    /// </summary>
+    public long PreErrorPassDelta
+    {
+        get { return preErrorPassDelta; }
+        set { 
+            // return true if there was a change.
+            SetField(ref preErrorPassDelta, value);
+            }
+    }
+    #endregion
+
+        #region PostErrorPassDelta Property
+    private long postErrorPassDelta = 1000;
+    /// <summary>
+    /// Gets or sets how many frames are skipped per render frame after error seen.
+    /// </summary>
+    public long PostErrorPassDelta
+    {
+        get { return postErrorPassDelta; }
+        set { 
+            // return true if there was a change.
+            SetField(ref postErrorPassDelta, value);
+            }
+    }
+    #endregion
 
         #region MinPass Property
         private int minPass = 0;

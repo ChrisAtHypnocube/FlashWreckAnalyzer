@@ -296,10 +296,9 @@ namespace FlashWreckAnalyzer
                         if (!UInt32.TryParse(passMatch.Groups["tick"].Value, NumberStyles.HexNumber, provider, out tick))
                             throw new Exception("Illegal format");
 
-                        uint errorCount;
+                        ulong errorCount;
                         if (
-                            !UInt32.TryParse(passMatch.Groups["errors"].Value, NumberStyles.HexNumber, provider,
-                                out errorCount))
+                            !UInt64.TryParse(passMatch.Groups["errors"].Value, out errorCount))
                             throw new Exception("Illegal format");
 
                         var passItem = new PassRecord(pass, frame, offset, tick, errorCount);
