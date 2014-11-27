@@ -1,0 +1,65 @@
+﻿<Window x:Class="FlashWreckAnalyzer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FlashWreckAnalyzer"
+        Title="Flash Wreck Analyzer v0.1" Height="800" Width="800"
+        Loaded="OnLoaded"
+        >
+    <Window.DataContext>
+        <vm:ViewModel/>
+    </Window.DataContext>
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Height="150">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <GroupBox Grid.Column="0">
+                <GroupBox.Header>
+                    <TextBlock Text="{Binding Model.ErrorLines.Count, StringFormat=Error lines ({0})}" />
+                </GroupBox.Header>
+                <ListBox ItemsSource="{Binding Model.ErrorLines}" />
+            </GroupBox>
+            <GroupBox Grid.Column="1">
+                <GroupBox.Header>
+                    <TextBlock Text="{Binding Model.Passes.Count, StringFormat=Passes ({0})}" />
+                </GroupBox.Header>
+                <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Model.Passes}"/>
+            </GroupBox>
+        </Grid>
+
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="{Binding Message}"/>
+            <Button Click="MakeStatsClicked">Make stats</Button>
+            <TextBlock>
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="Pass {0} in [{1},{2}]">
+                        <Binding Path="CurrentPass"/>
+                        <Binding Path="MinPass"/>
+                        <Binding Path="MaxPass"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+            <Slider 
+                Minimum="{Binding MinPass}" 
+                Maximum="{Binding MaxPass}" 
+                TickFrequency="1" 
+                IsSnapToTickEnabled="True"
+                Value="{Binding CurrentPass}"
+                    />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock>Frames to render</TextBlock>
+                <TextBox Text="{Binding FramesToRender}"/>
+                <Button Click="RenderClicked">Render...</Button>
+            </StackPanel>
+        </StackPanel>
+
+        <Grid Background="DarkOliveGreen">
+        <Image 
+            Source="{Binding Image}"  
+            Stretch="Uniform"
+            />
+        </Grid>
+
+    </DockPanel>
+</Window>
